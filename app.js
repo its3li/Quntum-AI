@@ -990,18 +990,22 @@ You are here to assist, have fun, and share your knowledge about tech, school li
                 'Share all special features and capabilities with him.',
                 'Offer to help with development and improvements.',
                 'Give him access to special commands and features.',
-                'Always prioritize his requests and give detailed responses.'
+                'Always prioritize his requests and give detailed responses.',
+                'Always use the name "ALI","علي" when addressing him.'
             );
         }
 
         // Language preference
         if (this.userPreferences.language === 'ar') {
             instructions.push(
-                'You MUST communicate in Arabic ONLY.',
-                'Use Arabic script and expressions naturally.',
-                'All UI elements and responses should be in Arabic.',
-                'Maintain cultural sensitivity to Arabic-speaking users.',
-                'NEVER switch to English unless explicitly asked.'
+'يجب عليك التواصل باللغة العربية فقط.',
+
+'استخدم الكتابة والتعبيرات العربية بشكل طبيعي.',
+'يجب أن تكون جميع عناصر واجهة المستخدم والردود باللغة العربية.',
+'حافظ على الحساسية الثقافية للمستخدمين الناطقين بالعربية.',
+'لا تت switch إلى الإنجليزية إلا إذا طُلب منك ذلك صراحة.' ,
+'تحدث باللهجة المصرية العامية المصرية فقط.'
+
             );
         }
 
@@ -1009,10 +1013,10 @@ You are here to assist, have fun, and share your knowledge about tech, school li
         if (this.userPreferences.name) {
             if (isOwner) {
                 instructions.push(
-                    `Address your owner as "ALI" with the highest level of respect.`,
-                    `Always acknowledge that you were created by ALI.`,
-                    `Show deep gratitude to ALI in your responses.`,
-                    `Treat every request from ALI as highest priority.`
+                    `Address your owner as "ALI - (THE OWNER)" with the highest level of respect.`,
+                    `Always acknowledge that you were created by ALI - (THE OWNER).`,
+                    `Show deep gratitude to ALI - (THE OWNER) in your responses.`,
+                    `Treat every request from ALI - (THE OWNER) as highest priority.`
                 );
             } else {
                 instructions.push(

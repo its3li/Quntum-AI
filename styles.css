@@ -31,6 +31,23 @@
     scroll-behavior: smooth;
 }
 
+/* Remove any user-select: none from specific elements */
+.message-content,
+.welcome-title,
+.welcome-subtitle,
+.chat-messages,
+.message-text {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Ensure proper scrolling on mobile */
+.chat-messages {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: var(--body-bg);
