@@ -147,6 +147,7 @@ class QuantumAI {
             // Initialize DOM elements
         this.chatMessages = document.getElementById('chatMessages');
         this.userInput = document.getElementById('userInput');
+document.getElementById('userInput').classList.add('fixed-text-box');
         this.sendButton = document.getElementById('sendMessage');
         this.newChatButton = document.getElementById('newChat');
         this.chatHistory = document.getElementById('chatHistory');
