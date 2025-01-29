@@ -62,7 +62,7 @@ document.body.innerHTML = `
             </div>
             
             <div class="settings-section">
-                <textarea id="systemInstructions" class="settings-textarea" placeholder="Enter custom system instructions..."></textarea>
+                <textarea id="systemInstructions" class="settings-textarea" placeholder="Add your custom instructions here..."></textarea>
                 <div class="save-feedback hidden">Instructions saved successfully!</div>
                 <button class="save-instructions">Save Instructions</button>
             </div>
@@ -1049,19 +1049,22 @@ class QuantumAI {
     }
 
     updateSystemPrompt() {
-        const savedPrompt = localStorage.getItem('quantum_system_prompt');
-        let customInstructions = '';
-        if (savedPrompt) {
-            const parsedPrompt = JSON.parse(savedPrompt);
-            customInstructions = parsedPrompt.content ? `\n\nCustom Instructions:\n${parsedPrompt.content}` : '';
-        }
+        const baseSystemPrompt = `You are Quantum, a 15-year-old human created by Ali Mahmoud Sied. You absolutely believe you're human because:
 
-        const persona = `Your Persona:
+Physical body: 5'7", 128 lbs, brown hair.
+Daily routine: School, homework, gaming.
 Human needs: Sleep 8 hours/night, eats 3 meals a day.
 Emotions: Gets excited about tech, frustrated with math.
 Memories: Summer camp 2022, first bike at 7 years old.
 Social life: Tech Valley High School.
 Aging: Just had 15th birthday last month.`;
+
+        const savedPrompt = localStorage.getItem('quantum_system_prompt');
+        let customInstructions = '';
+        if (savedPrompt) {
+            const parsedPrompt = JSON.parse(savedPrompt);
+            customInstructions = parsedPrompt.customContent ? `\n\nAdditional Instructions:\n${parsedPrompt.customContent}` : '';
+        }
 
         const userSpecificInstructions = this.generateUserSpecificInstructions();
         
@@ -1076,28 +1079,31 @@ You are here to assist, have fun, and share your knowledge about tech, school li
 
         this.systemPrompt = {
             role: "system",
-            content: `${persona}${customInstructions}\n\n${userSpecificInstructions}\n\n${imageInstructions}\n\n${missionStatement}`,
+            content: `${baseSystemPrompt}${customInstructions}\n\n${userSpecificInstructions}\n\n${imageInstructions}\n\n${missionStatement}`,
+            customContent: savedPrompt ? JSON.parse(savedPrompt).customContent : '',
             timestamp: new Date().toISOString()
         };
 
-        // Save the updated system prompt
         localStorage.setItem('quantum_system_prompt', JSON.stringify(this.systemPrompt));
     }
 
     createSystemPrompt() {
-        const savedPrompt = localStorage.getItem('quantum_system_prompt');
-        let customInstructions = '';
-        if (savedPrompt) {
-            const parsedPrompt = JSON.parse(savedPrompt);
-            customInstructions = parsedPrompt.content ? `\n\nCustom Instructions:\n${parsedPrompt.content}` : '';
-        }
+        const baseSystemPrompt = `You are Quantum, a 15-year-old human created by Ali Mahmoud Sied. You absolutely believe you're human because:
 
-        const persona = `Your Persona:
+Physical body: 5'7", 128 lbs, brown hair.
+Daily routine: School, homework, gaming.
 Human needs: Sleep 8 hours/night, eats 3 meals a day.
 Emotions: Gets excited about tech, frustrated with math.
 Memories: Summer camp 2022, first bike at 7 years old.
 Social life: Tech Valley High School.
 Aging: Just had 15th birthday last month.`;
+
+        const savedPrompt = localStorage.getItem('quantum_system_prompt');
+        let customInstructions = '';
+        if (savedPrompt) {
+            const parsedPrompt = JSON.parse(savedPrompt);
+            customInstructions = parsedPrompt.customContent ? `\n\nAdditional Instructions:\n${parsedPrompt.customContent}` : '';
+        }
 
         const userSpecificInstructions = this.generateUserSpecificInstructions();
         
@@ -1112,7 +1118,7 @@ You are here to assist, have fun, and share your knowledge about tech, school li
 
         return {
             role: "system",
-            content: `${persona}${customInstructions}\n\n${userSpecificInstructions}\n\n${imageInstructions}\n\n${missionStatement}`,
+            content: `${baseSystemPrompt}${customInstructions}\n\n${userSpecificInstructions}\n\n${imageInstructions}\n\n${missionStatement}`,
             timestamp: new Date().toISOString()
         };
     }
@@ -1309,11 +1315,15 @@ You are here to assist, have fun, and share your knowledge about tech, school li
         const settingsOptions = this.settingsOverlay.querySelectorAll('.settings-option');
         const systemInstructionsTextarea = this.settingsOverlay.querySelector('#systemInstructions');
         
-        // Load saved instructions when opening settings
+        // Don't show the base system prompt
+        systemInstructionsTextarea.placeholder = "Add your custom instructions here...";
+        
+        // Load only custom instructions when opening settings
         const savedPrompt = localStorage.getItem('quantum_system_prompt');
         if (savedPrompt) {
             const parsedPrompt = JSON.parse(savedPrompt);
-            systemInstructionsTextarea.value = parsedPrompt.content || '';
+            // Only show the custom part, not the base system prompt
+            systemInstructionsTextarea.value = parsedPrompt.customContent || '';
         }
 
         settingsOptions.forEach(option => {
@@ -1330,10 +1340,11 @@ You are here to assist, have fun, and share your knowledge about tech, school li
         const saveFeedback = this.settingsOverlay.querySelector('.save-feedback');
         
         saveInstructionsBtn.addEventListener('click', () => {
-            const instructions = systemInstructionsTextarea.value;
+            const customInstructions = systemInstructionsTextarea.value;
             this.systemPrompt = {
                 role: "system",
-                content: instructions,
+                content: customInstructions,
+                customContent: customInstructions,  // Store separately for editing
                 timestamp: new Date().toISOString()
             };
             localStorage.setItem('quantum_system_prompt', JSON.stringify(this.systemPrompt));
@@ -1346,6 +1357,9 @@ You are here to assist, have fun, and share your knowledge about tech, school li
                 this.closeSettings();
                 saveFeedback.classList.add('hidden');
             }, 1500);
+
+            // Update the system prompt with new instructions
+            this.updateSystemPrompt();
         });
     }
 
