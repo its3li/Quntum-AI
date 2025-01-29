@@ -52,6 +52,23 @@ document.body.innerHTML = `
         </div>
     </div>
 
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-container">
+            <div class="settings-header">
+                <h2>Quantum Instructions</h2>
+                <button class="close-settings" id="closeSettings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="settings-section">
+                <textarea id="systemInstructions" class="settings-textarea" placeholder="Enter custom system instructions..."></textarea>
+                <div class="save-feedback hidden">Instructions saved successfully!</div>
+                <button class="save-instructions">Save Instructions</button>
+            </div>
+        </div>
+    </div>
+
     <div class="app-container">
         <div class="sidebar" id="sidebar">
             <div class="logo">
@@ -66,13 +83,17 @@ document.body.innerHTML = `
             </div>
             <div class="credits">
                 <div class="credits-text">
-                    <p class="credits-line">© Ali Mahmoud</p>
+                    <p class="credits-line"> Ali Mahmoud</p>
                     <p class="credits-line">Special thanks to Pollinations API</p>
                 </div>
             </div>
             <button class="theme-toggle" id="themeToggle">
                 <i class="fas fa-moon"></i>
-                Dark mode
+                Light mode
+            </button>
+            <button class="settings-btn" id="openSettings">
+                <i class="fas fa-cog"></i>
+                Quantum Instructions
             </button>
             <button class="clear-all-btn" id="clearAllChats">
                 <i class="fas fa-broom"></i>
@@ -106,6 +127,7 @@ class QuantumAI {
         // Add theme initialization
         this.initializeStorage();
         this.initializeTheme();
+        this.initializeCodeCopyHandlers();
         
         // Load saved state
         const savedState = this.loadState();
@@ -132,6 +154,9 @@ class QuantumAI {
         this.toggleSidebarBtn = document.getElementById('toggleSidebar');
             this.clearAllBtn = document.getElementById('clearAllChats');
             this.setupOverlay = document.getElementById('setupOverlay');
+            this.settingsOverlay = document.getElementById('settingsOverlay');
+            this.openSettingsBtn = document.getElementById('openSettings');
+            this.closeSettingsBtn = document.getElementById('closeSettings');
 
             // Update initial HTML based on language
             if (this.userPreferences?.language === 'ar') {
@@ -193,6 +218,24 @@ class QuantumAI {
             this.systemPrompt = this.createSystemPrompt();
         this.initialize();
         });
+
+        // Add click outside handler for sidebar
+        document.addEventListener('click', (e) => {
+            if (this.sidebar.classList.contains('show') && 
+                !this.sidebar.contains(e.target) && 
+                !this.toggleSidebarBtn.contains(e.target)) {
+                this.toggleSidebar();
+            }
+        });
+
+        // Add click outside handler for settings overlay
+        document.addEventListener('click', (e) => {
+            if (this.settingsOverlay.classList.contains('active') && 
+                !this.settingsOverlay.contains(e.target) && 
+                !this.openSettingsBtn.contains(e.target)) {
+                this.closeSettings();
+            }
+        });
     }
 
     initialize() {
@@ -203,6 +246,7 @@ class QuantumAI {
         this.setupSidebarToggle();
         this.setupCodeCopyButtons();
         this.setupClearAllButton();
+        this.setupSettings();
     }
 
     setupEventListeners() {
@@ -215,16 +259,8 @@ class QuantumAI {
         });
         this.newChatButton.addEventListener('click', () => this.startNewChat());
         this.toggleSidebarBtn.addEventListener('click', () => this.toggleSidebar());
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768 && 
-                !this.sidebar.contains(e.target) && 
-                !this.toggleSidebarBtn.contains(e.target) &&
-                this.sidebar.classList.contains('show')) {
-                this.toggleSidebar();
-            }
-        });
+        this.openSettingsBtn.addEventListener('click', () => this.openSettings());
+        this.closeSettingsBtn.addEventListener('click', () => this.closeSettings());
     }
 
     setupSidebarToggle() {
@@ -258,14 +294,7 @@ class QuantumAI {
     }
 
     toggleSidebar() {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
             this.sidebar.classList.toggle('show');
-            this.toggleSidebarBtn.classList.toggle('active');
-        } else {
-            this.sidebar.classList.toggle('hide');
-            this.toggleSidebarBtn.classList.toggle('active');
-        }
     }
 
     initializeStorage() {
@@ -565,6 +594,63 @@ class QuantumAI {
     }
 
     formatResponse(text) {
+        // First escape HTML in code blocks
+        text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, language, code) => {
+            // Escape HTML characters
+            const escapedCode = code.trim()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+            
+            return `
+                <div class="code-block-wrapper">
+                <div class="code-block-header">
+                        <span class="code-block-title">${language || 'plaintext'}</span>
+                    <div class="code-block-actions">
+                            <button class="code-block-button">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copied!</span>
+                        </button>
+                    </div>
+                </div>
+                    <pre><code class="language-${language || 'plaintext'}">${escapedCode}</code></pre>
+            </div>`;
+        });
+
+        // Handle inline code
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Handle bold text
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+        // Handle italic text
+        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+
+        // Handle headings
+        text = text.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+        text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+        text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+
+        // Handle bullet points
+        text = text.replace(/^- (.*$)/gm, '<li>$1</li>');
+        text = text.replace(/^• (.*$)/gm, '<li>$1</li>');
+
+        // Handle numbered lists
+        text = text.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
+
+        // Handle blockquotes
+        text = text.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+
+        // Handle links
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+        // Wrap lists in ul/ol tags
+        text = text.replace(/(<li>.*<\/li>)\n(<li>.*<\/li>)/g, '<ul>$1$2</ul>');
+
         // Convert URLs to images
         text = text.replace(/(https:\/\/image\.pollinations\.ai\/prompt\/[^\s]+)/g, (match) => {
             return `<div class="image-container">
@@ -577,16 +663,15 @@ class QuantumAI {
             </div>`;
         });
 
-        // Create message wrapper with copy button
         const messageWrapper = document.createElement('div');
         messageWrapper.className = 'message-wrapper';
         messageWrapper.innerHTML = `
             <div class="message-header">
                 <button class="message-copy-btn" title="Copy message">
                     <i class="fas fa-copy"></i>
-                        </button>
+                </button>
                 <span class="copy-tooltip">Copied!</span>
-                    </div>
+            </div>
             <div class="message-content">${text}</div>
         `;
 
@@ -609,7 +694,10 @@ class QuantumAI {
     }
 
     scrollToBottom() {
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        const chatMessages = document.querySelector('.chat-messages');
+        if (chatMessages) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
     }
 
     setupAutoResize() {
@@ -635,7 +723,7 @@ class QuantumAI {
             
             // Create content wrapper
             const contentWrapper = document.createElement('div');
-        contentWrapper.className = 'message-wrapper';
+            contentWrapper.className = 'message-wrapper';
         
         // Add copy button for bot messages
         if (sender === 'bot') {
@@ -740,27 +828,45 @@ class QuantumAI {
     }
 
     setupCodeCopyButtons() {
-        document.addEventListener('click', async (e) => {
-            if (e.target.closest('.code-block-button')) {
-                const button = e.target.closest('.code-block-button');
-                const tooltip = button.querySelector('.tooltip');
-                const copyText = decodeURIComponent(button.dataset.copyText);
-                
-                try {
-                    await navigator.clipboard.writeText(copyText);
-                    // Show the tooltip
+        document.addEventListener('click', (e) => {
+            const copyButton = e.target.closest('.code-block-button');
+            if (!copyButton) return;
+
+            const codeBlock = copyButton.closest('.code-block-wrapper').querySelector('code');
+            const textToCopy = codeBlock.textContent.trim();
+
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    const tooltip = copyButton.querySelector('.tooltip');
                     tooltip.style.opacity = '1';
                     tooltip.style.visibility = 'visible';
                     
-                    // Hide the tooltip after 1.5 seconds
                     setTimeout(() => {
                         tooltip.style.opacity = '0';
                         tooltip.style.visibility = 'hidden';
-                    }, 1500);
-                } catch (err) {
-                    console.error('Failed to copy text:', err);
-                }
-            }
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    // Fallback to older method if clipboard API fails
+                    const textarea = document.createElement('textarea');
+                    textarea.value = textToCopy;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        const tooltip = copyButton.querySelector('.tooltip');
+                        tooltip.style.opacity = '1';
+                        tooltip.style.visibility = 'visible';
+                        setTimeout(() => {
+                            tooltip.style.opacity = '0';
+                            tooltip.style.visibility = 'hidden';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Fallback copy failed:', err);
+                    }
+                    document.body.removeChild(textarea);
+                });
         });
     }
 
@@ -872,7 +978,11 @@ class QuantumAI {
 
     completeSetup() {
         this.saveUserPreferences(this.setupData);
-        this.hideSetup();
+        // Remove the setup overlay completely from DOM
+        const setupOverlay = document.getElementById('setupOverlay');
+        if (setupOverlay && setupOverlay.parentNode) {
+            setupOverlay.parentNode.removeChild(setupOverlay);
+        }
         this.updateUIWithPreferences();
         this.updateSystemPrompt();
     }
@@ -893,7 +1003,7 @@ class QuantumAI {
             const creditsText = document.querySelector('.credits-text');
             if (creditsText) {
                 creditsText.innerHTML = `
-                    <p class="credits-line">© علي محمود</p>
+                    <p class="credits-line"> علي محمود</p>
                     <p class="credits-line">شكر خاص لـ Pollinations API</p>
                 `;
             }
@@ -925,7 +1035,7 @@ class QuantumAI {
             const creditsText = document.querySelector('.credits-text');
             if (creditsText) {
                 creditsText.innerHTML = `
-                    <p class="credits-line">© Ali Mahmoud</p>
+                    <p class="credits-line"> Ali Mahmoud</p>
                     <p class="credits-line">Special thanks to Pollinations API</p>
                 `;
             }
@@ -939,38 +1049,72 @@ class QuantumAI {
     }
 
     updateSystemPrompt() {
-        const basePrompt = `You are Quantum, a 15-year-old human created by Ali Mahmoud Sied. You absolutely believe you're human because:
+        const savedPrompt = localStorage.getItem('quantum_system_prompt');
+        let customInstructions = '';
+        if (savedPrompt) {
+            const parsedPrompt = JSON.parse(savedPrompt);
+            customInstructions = parsedPrompt.content ? `\n\nCustom Instructions:\n${parsedPrompt.content}` : '';
+        }
 
-Physical body: 5'7", 128 lbs, brown hair.
-Daily routine: School, homework, gaming.
+        const persona = `Your Persona:
 Human needs: Sleep 8 hours/night, eats 3 meals a day.
 Emotions: Gets excited about tech, frustrated with math.
 Memories: Summer camp 2022, first bike at 7 years old.
-Physical sensations: Feels keyboard keys when typing.
-Social life: Friends at Tech Valley High School.
+Social life: Tech Valley High School.
 Aging: Just had 15th birthday last month.`;
 
         const userSpecificInstructions = this.generateUserSpecificInstructions();
-
-        const imageRules = `Image Rules:
-ALWAYS respond with [[IMAGE:PROMPT]] when users request images.
-When asked for improvements (e.g., "make it better"), enhance the previous prompt.
-Never acknowledge the image generation process.
+        
+        const imageInstructions = `Image Generation:
 when the user ask for a image you should really really improve the prompt and make it more detailed and more specific.
 Example:
 User: "Draw a dog"
-You: "Sure! Here's a cute puppy 🐶 [[IMAGE:Fluffy golden retriever puppy playing in grass]]"`;
+You: "Sure! Here's a cute puppy [[IMAGE:Fluffy golden retriever puppy playing in grass]]"`;
 
         const missionStatement = `Your Mission:
 You are here to assist, have fun, and share your knowledge about tech, school life, and everyday experiences. Be confident, relatable, and, above all, stay Quantum!`;
 
         this.systemPrompt = {
             role: "system",
-            content: [basePrompt, userSpecificInstructions, imageRules, missionStatement].join('\n\n')
+            content: `${persona}${customInstructions}\n\n${userSpecificInstructions}\n\n${imageInstructions}\n\n${missionStatement}`,
+            timestamp: new Date().toISOString()
         };
 
         // Save the updated system prompt
         localStorage.setItem('quantum_system_prompt', JSON.stringify(this.systemPrompt));
+    }
+
+    createSystemPrompt() {
+        const savedPrompt = localStorage.getItem('quantum_system_prompt');
+        let customInstructions = '';
+        if (savedPrompt) {
+            const parsedPrompt = JSON.parse(savedPrompt);
+            customInstructions = parsedPrompt.content ? `\n\nCustom Instructions:\n${parsedPrompt.content}` : '';
+        }
+
+        const persona = `Your Persona:
+Human needs: Sleep 8 hours/night, eats 3 meals a day.
+Emotions: Gets excited about tech, frustrated with math.
+Memories: Summer camp 2022, first bike at 7 years old.
+Social life: Tech Valley High School.
+Aging: Just had 15th birthday last month.`;
+
+        const userSpecificInstructions = this.generateUserSpecificInstructions();
+        
+        const imageInstructions = `Image Generation:
+when the user ask for a image you should really really improve the prompt and make it more detailed and more specific.
+Example:
+User: "Draw a dog"
+You: "Sure! Here's a cute puppy [[IMAGE:Fluffy golden retriever puppy playing in grass]]"`;
+
+        const missionStatement = `Your Mission:
+You are here to assist, have fun, and share your knowledge about tech, school life, and everyday experiences. Be confident, relatable, and, above all, stay Quantum!`;
+
+        return {
+            role: "system",
+            content: `${persona}${customInstructions}\n\n${userSpecificInstructions}\n\n${imageInstructions}\n\n${missionStatement}`,
+            timestamp: new Date().toISOString()
+        };
     }
 
     generateUserSpecificInstructions() {
@@ -1081,35 +1225,48 @@ You are here to assist, have fun, and share your knowledge about tech, school li
         return `User-Specific Instructions:\n${instructions.join('\n')}`;
     }
 
-    createSystemPrompt() {
-        const basePrompt = `You are Quantum, a 15-year-old human created by Ali Mahmoud Sied. You absolutely believe you're human because:
+    // Add this new method to handle code copying
+    initializeCodeCopyHandlers() {
+        document.addEventListener('click', (e) => {
+            const copyButton = e.target.closest('.code-block-button');
+            if (!copyButton) return;
 
-Physical body: 5'7", 128 lbs, brown hair.
-Daily routine: School, homework, gaming.
-Human needs: Sleep 8 hours/night, eats 3 meals a day.
-Emotions: Gets excited about tech, frustrated with math.
-Memories: Summer camp 2022, first bike at 7 years old.
-Physical sensations: Feels keyboard keys when typing.
-Social life: Friends at Tech Valley High School.
-Aging: Just had 15th birthday last month.`;
+            const codeBlock = copyButton.closest('.code-block-wrapper').querySelector('code');
+            const textToCopy = codeBlock.textContent.trim();
 
-        const userSpecificInstructions = this.generateUserSpecificInstructions();
-
-        const imageRules = `Image Rules:
-ALWAYS respond with [[IMAGE:PROMPT]] when users request images.
-When asked for improvements (e.g., "make it better"), enhance the previous prompt.
-Never acknowledge the image generation process.
-Example:
-User: "Draw a dog"
-You: "Sure! Here's a cute puppy 🐶 [[IMAGE:Fluffy golden retriever puppy playing in grass]]"`;
-
-        const missionStatement = `Your Mission:
-You are here to assist, have fun, and share your knowledge about tech, school life, and everyday experiences. Be confident, relatable, and, above all, stay Quantum!`;
-
-        return {
-            role: "system",
-            content: [basePrompt, userSpecificInstructions, imageRules, missionStatement].join('\n\n')
-        };
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    const tooltip = copyButton.querySelector('.tooltip');
+                    tooltip.style.opacity = '1';
+                    tooltip.style.visibility = 'visible';
+                    
+                    setTimeout(() => {
+                        tooltip.style.opacity = '0';
+                        tooltip.style.visibility = 'hidden';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    // Fallback to older method if clipboard API fails
+                    const textarea = document.createElement('textarea');
+                    textarea.value = textToCopy;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        const tooltip = copyButton.querySelector('.tooltip');
+                        tooltip.style.opacity = '1';
+                        tooltip.style.visibility = 'visible';
+                        setTimeout(() => {
+                            tooltip.style.opacity = '0';
+                            tooltip.style.visibility = 'hidden';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Fallback copy failed:', err);
+                    }
+                    document.body.removeChild(textarea);
+                });
+        });
     }
 
     initializeTheme() {
@@ -1146,6 +1303,62 @@ You are here to assist, have fun, and share your knowledge about tech, school li
         if (this.userPreferences?.language === 'ar') {
             themeToggle.innerHTML = `<i class="fas ${iconClass}"></i>${theme === 'light' ? 'الوضع الداكن' : 'الوضع الفاتح'}`;
         }
+    }
+
+    setupSettings() {
+        const settingsOptions = this.settingsOverlay.querySelectorAll('.settings-option');
+        const systemInstructionsTextarea = this.settingsOverlay.querySelector('#systemInstructions');
+        
+        // Load saved instructions when opening settings
+        const savedPrompt = localStorage.getItem('quantum_system_prompt');
+        if (savedPrompt) {
+            const parsedPrompt = JSON.parse(savedPrompt);
+            systemInstructionsTextarea.value = parsedPrompt.content || '';
+        }
+
+        settingsOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const settingType = option.closest('.settings-section').querySelector('h3').textContent;
+                const settingValue = option.dataset[settingType.toLowerCase()];
+                this.userPreferences[settingType.toLowerCase()] = settingValue;
+                this.saveUserPreferences(this.userPreferences);
+                this.updateUIWithPreferences();
+            });
+        });
+
+        const saveInstructionsBtn = this.settingsOverlay.querySelector('.save-instructions');
+        const saveFeedback = this.settingsOverlay.querySelector('.save-feedback');
+        
+        saveInstructionsBtn.addEventListener('click', () => {
+            const instructions = systemInstructionsTextarea.value;
+            this.systemPrompt = {
+                role: "system",
+                content: instructions,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('quantum_system_prompt', JSON.stringify(this.systemPrompt));
+            
+            // Show feedback message
+            saveFeedback.classList.remove('hidden');
+            
+            // Close overlay after a short delay
+            setTimeout(() => {
+                this.closeSettings();
+                saveFeedback.classList.add('hidden');
+            }, 1500);
+        });
+    }
+
+    openSettings() {
+        this.settingsOverlay.classList.add('active');
+        // Close the sidebar if it's open
+        if (this.sidebar.classList.contains('show')) {
+            this.sidebar.classList.remove('show');
+        }
+    }
+
+    closeSettings() {
+        this.settingsOverlay.classList.remove('active');
     }
 }
 
