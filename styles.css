@@ -36,15 +36,7 @@
 *::-webkit-scrollbar {
     display: none;  /* Chrome, Safari, Opera */
 }
-.fixed-text-box {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background-color: #fff; /* Adjust the background color as needed */
-  padding: 10px; /* Adjust the padding as needed */
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); /* Optional: add a shadow for better visibility */
-  z-index: 1000; /* Ensure it stays on top of other elements */
-}
+
 /* Remove old scrollbar styles */
 ::-webkit-scrollbar,
 ::-webkit-scrollbar-track,
@@ -449,6 +441,7 @@ body {
     border: none;
     color: var(--text-gray);
     font-family: inherit;
+    z-index: 1000;
     font-size: 1rem;
     line-height: 1.5;
     resize: none;
