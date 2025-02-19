@@ -481,7 +481,7 @@ class QuantumAI {
                     })),
                     { role: 'user', content: prompt }
                 ],
-                model: 'openai',
+                model: 'evil',
                 temperature: 0.5,
                 frequency_penalty: 0,
                 presence_penalty: 0,
